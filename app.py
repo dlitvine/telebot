@@ -1,4 +1,4 @@
-from utils import Currencies, CurrencyConverter, InputException
+from utils import Currencies, CurrencyConverter, InputException, APIException
 import telebot
 from config import TM_TOKEN
 
@@ -41,25 +41,41 @@ def send_help(message):
 
 @bot.message_handler(content_types='text')
 def text_parser(message):
-    inp_ = message.text.split()
-
-    if len(inp_) != 3:
-        raise InputException("Wrong number of parameters entered, please try again")
     try:
-        float(inp_[2])
-    except:
-        raise InputException("Amount must be a number")
+        inp_ = message.text.split()
+        target = inp_[0]
+        quote = inp_[1]
+        amount = inp_[2]
+        if len(inp_) != 3:
+            raise InputException("Wrong number of parameters entered, please try again")
+        try:
+            am_ = float(amount)
+        except:
+            raise InputException("Amount must be a number")
 
-    target = inp_[0]
-    quote = inp_[1]
-    amount = inp_[2]
+        result = CurrencyConverter.convert_currency(target, quote, amount)
 
-    result = CurrencyConverter.convert_currency(target, quote, amount)
-    if result == "error" or result is None:
-        bot.reply_to(message, f'Conversion unsuccessful, please try again later')
+        if result == "error":
+            raise APIException("Server is down, try again later")
+
+        if result is None:
+            raise APIException("Wrong currency input, try /values to refer to currency code")
+
+    except InputException as e:
+        bot.reply_to(message, f"Input error: \n{e}")
+
+    except APIException as e:
+        bot.reply_to(message, f"API issue: \n{e}")
+
+    except Exception as e:
+        bot.reply_to(message, f"Other (unknown) error: \n{e}")
+
     else:
-        str_ = f'Conversion result is: {amount} {target} is {result} {quote}'
-        bot.reply_to(message, str_)
+        if result == "error" or result is None:
+            bot.reply_to(message, f'Conversion unsuccessful, please try again later')
+        else:
+            str_ = f'Conversion result is: {amount} {target} is {result} {quote}'
+            bot.reply_to(message, str_)
 
 
 @bot.message_handler(content_types=['document', 'audio', 'photo', ])

@@ -22,3 +22,5 @@ class CurrencyConverter:
 
 class InputException(Exception):
     pass
+class APIException(Exception):
+    pass
